@@ -1,7 +1,7 @@
 {
   "name": "prisma-smart-formatter",
-  "displayName": "Prisma Smart Formatter",
-  "description": "Format Prisma schema file in a smarter way",
+  "displayName": "The Now Smart Formatter",
+  "description": "Collections of adjustments to formatters to make dev life easier (Prisma, Typescript)",
   "publisher": "KhanhhNe",
   "version": "0.1.0",
   "engines": {
@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onLanguage:prisma",
-    "onLanguage:typescript"
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
   ],
   "main": "./dist/extension.js",
   "contributes": {},
