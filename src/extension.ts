@@ -41,24 +41,21 @@ function formatPrismaModelContent(modelContent: string[]): string[] {
         }
     })
 
-    const longest = modelLines
-        .filter(
-            ([name, colType, mapPart]) => name && colType && mapPart.startsWith('@map')
-        )
-        .reduce(
-            (acc, [name, colType, mapPart]) => [
-                Math.max(acc[0], name.length),
-                Math.max(acc[1], colType.length),
-                Math.max(acc[2], mapPart.length),
-            ],
-            [0, 0, 0]
-        )
+    const nameLongest = modelLines
+        .filter(([name]) => !name.startsWith('@'))
+        .reduce((acc, [name]) => Math.max(acc, name.length), 0)
+    const typeLongest = modelLines
+        .filter(([name]) => !name.startsWith('@'))
+        .reduce((acc, [, colType]) => Math.max(acc, colType.length), 0)
+    const mapLongest = modelLines
+        .filter(([_, __, mapPart]) => mapPart.startsWith('@map'))
+        .reduce((acc, [, , mapPart]) => Math.max(acc, mapPart.length), 0)
 
     const newLines = []
     for (const [name, colType, mapPart, tags] of modelLines) {
         const line = `  ` +
-            `${name.padEnd(longest[0])} ${colType.padEnd(longest[1])} ` +
-            `${mapPart.padEnd(longest[2])} ${tags.join(' ').trimEnd()}`
+            `${name.padEnd(nameLongest)} ${colType.padEnd(typeLongest)} ` +
+            `${mapPart.padEnd(mapLongest)} ${tags.join(' ').trimEnd()}`
         newLines.push(line.trimEnd())
     }
     return newLines
@@ -115,22 +112,23 @@ export function activate(context: vscode.ExtensionContext) {
             return
         }
 
-        let section = []
-        let lineNumber: number | null = null
-        for (const line of document.getText().split(/\n/g)) {
-            lineNumber = lineNumber === null ? 0 : lineNumber + 1
+        await editor.edit((editBuilder) => {
+            let section = []
+            let lineNumber: number | null = null
 
-            if (line.trim().startsWith('import')) {
-                section.push(line)
-                continue
-            }
+            for (const line of document.getText().split(/\n/g)) {
+                lineNumber = lineNumber === null ? 0 : lineNumber + 1
 
-            if (!section.length) {
-                continue
-            }
+                if (line.trim().startsWith('import')) {
+                    section.push(line)
+                    continue
+                }
 
-            const formattedSection = formatTypescriptImports(section.join('\n'))
-            await editor.edit((editBuilder) => {
+                if (!section.length) {
+                    continue
+                }
+
+                const formattedSection = formatTypescriptImports(section.join('\n'))
                 editBuilder.replace(
                     new vscode.Range(
                         new vscode.Position(lineNumber! - section.length, 0),
@@ -138,16 +136,15 @@ export function activate(context: vscode.ExtensionContext) {
                     ),
                     formattedSection + '\n'
                 )
-            })
-            section = []
-        }
+                section = []
+            }
+        })
     }))
 
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('typescript', {
         async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
             const config = vscode.workspace.getConfiguration('editor', { languageId: 'typescript' })
             const defaultTypescriptFormatter = config.get('defaultFormatter') as string | undefined
-            vscode.window.showInformationMessage(defaultTypescriptFormatter ?? 'vscode.typescript-language-features')
 
             await config.update('defaultFormatter', defaultTypescriptFormatter ?? 'vscode.typescript-language-features', true)
             await vscode.commands.executeCommand('editor.action.formatDocument')
