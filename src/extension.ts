@@ -62,9 +62,8 @@ function formatPrismaModelContent(modelContent: string[]): string[] {
 }
 
 
-function formatTypescriptImports(importsText: string): string {
-    const imports = importsText.split(/\n/g).map((i) => i.trim())
-    const sortedImports = [...imports]
+function formatTypescriptImports(imports: string[]): string[] {
+    const sortedImports = [...imports.map(i => i.trim())]
         .sort((a, b) => {
             // Prioritize type imports, then curly braces, then default imports
             const aType = a.includes('import type')
@@ -94,7 +93,23 @@ function formatTypescriptImports(importsText: string): string {
 
             return -((aImports ?? '').length - (bImports ?? '').length)
         })
-    return sortedImports.join('\n')
+    return sortedImports
+}
+
+
+let isRunning = false
+
+// template T
+async function avoidRaceFormat<T>(func: () => Promise<T[]>): Promise<T[]> {
+    if (isRunning) {
+        return []
+    }
+    isRunning = true
+    try {
+        return await func()
+    } finally {
+        isRunning = false
+    }
 }
 
 
@@ -128,14 +143,16 @@ export function activate(context: vscode.ExtensionContext) {
                     continue
                 }
 
-                const formattedSection = formatTypescriptImports(section.join('\n'))
-                editBuilder.replace(
-                    new vscode.Range(
-                        new vscode.Position(lineNumber! - section.length, 0),
-                        new vscode.Position(lineNumber!, 0)
-                    ),
-                    formattedSection + '\n'
-                )
+                const formattedSection = formatTypescriptImports(section)
+                if (formattedSection.join('\n') !== section.join('\n')) {
+                    editBuilder.replace(
+                        new vscode.Range(
+                            new vscode.Position(lineNumber! - section.length, 0),
+                            new vscode.Position(lineNumber!, 0)
+                        ),
+                        formattedSection.join('\n') + '\n'
+                    )
+                }
                 section = []
             }
         })
@@ -143,35 +160,37 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('typescript', {
         async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
-            const config = vscode.workspace.getConfiguration('editor', { languageId: 'typescript' })
-            const defaultTypescriptFormatter = config.get('defaultFormatter') as string | undefined
+            return await avoidRaceFormat(async () => {
+                const config = vscode.workspace.getConfiguration('editor', { languageId: 'typescript' })
+                const defaultTypescriptFormatter = config.get('defaultFormatter') as string | undefined
 
-            await config.update('defaultFormatter', defaultTypescriptFormatter ?? 'vscode.typescript-language-features', true)
-            await vscode.commands.executeCommand('editor.action.formatDocument')
-            await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModelsImports')
+                await config.update('defaultFormatter', defaultTypescriptFormatter ?? 'vscode.typescript-language-features', true)
+                await vscode.commands.executeCommand('editor.action.formatDocument')
+                await config.update('defaultFormatter', 'KhanhhNe.prisma-smart-formatter', true)
+                await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModelsImports')
 
-            await config.update('defaultFormatter', 'KhanhhNe.prisma-smart-formatter', true)
-
-            return []
+                return []
+            })
         }
     }))
 
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('typescriptreact', {
         async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
-            const config = vscode.workspace.getConfiguration('editor', { languageId: 'typescript' })
-            const defaultTypescriptFormatter = config.get('defaultFormatter') as string | undefined
-            vscode.window.showInformationMessage(defaultTypescriptFormatter ?? 'vscode.typescript-language-features')
+            return await avoidRaceFormat(async () => {
+                const config = vscode.workspace.getConfiguration('editor', { languageId: 'typescript' })
+                const defaultTypescriptFormatter = config.get('defaultFormatter') as string | undefined
+                vscode.window.showInformationMessage(defaultTypescriptFormatter ?? 'vscode.typescript-language-features')
 
-            await config.update('defaultFormatter', defaultTypescriptFormatter ?? 'vscode.typescript-language-features', true)
-            await vscode.commands.executeCommand('editor.action.formatDocument')
-            await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModelsImports')
+                await config.update('defaultFormatter', defaultTypescriptFormatter ?? 'vscode.typescript-language-features', true)
+                await vscode.commands.executeCommand('editor.action.formatDocument')
+                await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModelsImports')
 
-            await config.update('defaultFormatter', 'KhanhhNe.prisma-smart-formatter', true)
+                await config.update('defaultFormatter', 'KhanhhNe.prisma-smart-formatter', true)
 
-            return []
+                return []
+            })
         }
     }))
-
 
     context.subscriptions.push(vscode.commands.registerTextEditorCommand('prisma-smart-formatter.formatPrismaModels', async () => {
         const editor = vscode.window.activeTextEditor
@@ -218,14 +237,16 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('prisma', {
         async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
-            const config = vscode.workspace.getConfiguration('editor', { languageId: 'prisma' })
-            await config.update("defaultFormatter", "Prisma.prisma", true)
-            await vscode.commands.executeCommand('editor.action.formatDocument')
-            await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModels')
+            return await avoidRaceFormat(async () => {
+                const config = vscode.workspace.getConfiguration('editor', { languageId: 'prisma' })
+                await config.update("defaultFormatter", "Prisma.prisma", true)
+                await vscode.commands.executeCommand('editor.action.formatDocument')
+                await vscode.commands.executeCommand('prisma-smart-formatter.formatPrismaModels')
 
-            await config.update("defaultFormatter", "KhanhhNe.prisma-smart-formatter", true)
+                await config.update("defaultFormatter", "KhanhhNe.prisma-smart-formatter", true)
 
-            return []
+                return []
+            })
         }
     }))
 }
