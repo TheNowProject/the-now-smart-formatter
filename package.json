@@ -20,7 +20,40 @@
     "onLanguage:typescriptreact"
   ],
   "main": "./dist/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": [
+      {
+        "id": "prisma-smart-formatter",
+        "title": "The Now Smart Formatter",
+        "properties": {
+          "prisma-smart-formatter.typescript.defaultFormatter": {
+            "type": [
+              "string",
+              null
+            ],
+            "description": "The default formatter for TypeScript.",
+            "default": null
+          },
+          "prisma-smart-formatter.typescriptreact.defaultFormatter": {
+            "type": [
+              "string",
+              null
+            ],
+            "description": "The default formatter for TypeScript React.",
+            "default": null
+          },
+          "prisma-smart-formatter.prisma.defaultFormatter": {
+            "type": [
+              "string",
+              null
+            ],
+            "description": "The default formatter for Prisma.",
+            "default": null
+          }
+        }
+      }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
