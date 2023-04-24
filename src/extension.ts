@@ -69,7 +69,7 @@ function formatTypescriptImports(imports: string[]): string[] {
     const defaultImports = rawImports.filter(i => !typeImports.includes(i) && !curlyImports.includes(i))
 
     const cmpFunc = (a: string, b: string) => {
-        const re = /import\s+(?:type\s+)?(.*?)\s+from\s+.*/g
+        const re = /import\s+(?:type\s+)?(.*?)\s+from\s+.*/gs
         const aImports = [...a.matchAll(re)][0]?.[1]
         const bImports = [...b.matchAll(re)][0]?.[1]
 
@@ -118,28 +118,34 @@ export async function activate(context: vscode.ExtensionContext) {
 
         await editor.edit((editBuilder) => {
             let section = []
-            let lineNumber: number | null = null
 
-            for (const line of document.getText().split(/\n/g)) {
-                lineNumber = lineNumber === null ? 0 : lineNumber + 1
+            const splittedImports = document.getText().split(/(?:(\s+)(?=import ))|(?:\n(?=\n\S))/g)
+            for (let index = 0; index < splittedImports.length; index += 2) {
+                const line = splittedImports[index]
+                const delimiter = splittedImports[index + 1]
 
-                if (line.trim().startsWith('import')) {
+                if (line.startsWith('import')) {
                     section.push(line)
-                    continue
+                    if (delimiter === '\n') {
+                        continue
+                    }
                 }
 
-                if (!section.length) {
+                if (section.length === 0) {
                     continue
                 }
 
                 const formattedSection = formatTypescriptImports(section)
                 if (formattedSection.join('\n') !== section.join('\n')) {
+                    const firstLine = section[0]
+                    const lastLine = section[section.length - 1]
+
                     editBuilder.replace(
                         new vscode.Range(
-                            new vscode.Position(lineNumber! - section.length, 0),
-                            new vscode.Position(lineNumber!, 0)
+                            document.positionAt(document.getText().indexOf(firstLine)),
+                            document.positionAt(document.getText().indexOf(lastLine) + lastLine.length)
                         ),
-                        formattedSection.join('\n') + '\n'
+                        formattedSection.join('\n')
                     )
                 }
                 section = []
