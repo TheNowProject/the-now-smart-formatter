@@ -3,7 +3,7 @@
   "displayName": "The Now Smart Formatter",
   "description": "Collections of adjustments to formatters to make dev life easier (Prisma, Typescript)",
   "publisher": "KhanhhNe",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/KhanhhNe/the-now-smart-formatter.git"
