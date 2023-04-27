@@ -2,7 +2,6 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
 
-
 function parseLine(line: string): [string, string, string, string[]] {
     const [name, colType, ...tags] = line.trim().split(/\s+/)
     let parsedTags: string[] = [...tags.join(' ').matchAll(/(@[^@]+)/g)]
@@ -65,8 +64,13 @@ function formatPrismaModelContent(modelContent: string[]): string[] {
 function formatTypescriptImports(imports: string[]): string[] {
     const rawImports = imports.map(i => i.trim())
     const typeImports = rawImports.filter(i => i.includes('import type'))
-    const curlyImports = rawImports.filter(i => i.includes('import {'))
-    const defaultImports = rawImports.filter(i => !typeImports.includes(i) && !curlyImports.includes(i))
+    const curlyMultilineImports = rawImports.filter(i => i.includes('import {') && i.includes('\n'))
+    const curlyImports = rawImports.filter(i => i.includes('import {') && !curlyMultilineImports.includes(i))
+    const defaultImports = rawImports
+        .filter(i =>
+            !typeImports.includes(i) &&
+            !curlyImports.includes(i) &&
+            !curlyMultilineImports.includes(i))
 
     const cmpFunc = (a: string, b: string) => {
         const re = /import\s+(?:type\s+)?(.*?)\s+from\s+.*/gs
@@ -76,9 +80,26 @@ function formatTypescriptImports(imports: string[]): string[] {
         return -((aImports ?? '').length - (bImports ?? '').length)
     }
 
+    const processedCurlyMultilineImports = curlyMultilineImports.map(importLine => {
+        // Sort the lines (of attributes inside the { }) by their descending length
+        const parts = importLine.split(/\n+/)
+        const importKeyword = parts[0]
+        const fromStatement = parts[parts.length - 1]
+        const attributes = parts
+            .slice(1, parts.length - 1)
+            .sort((a, b) => b.length - a.length)
+
+        return (
+            `${importKeyword}\n` +
+            `${attributes.join('\n')}\n` +
+            `${fromStatement}`
+        )
+    })
+
     return [
         ...typeImports.sort(cmpFunc),
         ...curlyImports.sort(cmpFunc),
+        ...processedCurlyMultilineImports.sort(cmpFunc),
         ...defaultImports.sort(cmpFunc)
     ]
 }
@@ -137,13 +158,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 const formattedSection = formatTypescriptImports(section)
                 if (formattedSection.join('\n') !== section.join('\n')) {
-                    const firstLine = section[0]
-                    const lastLine = section[section.length - 1]
+                    const firstPos = document.getText().indexOf(section.join('\n'))
 
                     editBuilder.replace(
                         new vscode.Range(
-                            document.positionAt(document.getText().indexOf(firstLine)),
-                            document.positionAt(document.getText().indexOf(lastLine) + lastLine.length)
+                            document.positionAt(firstPos),
+                            document.positionAt(firstPos + section.join('\n').length)
                         ),
                         formattedSection.join('\n')
                     )
