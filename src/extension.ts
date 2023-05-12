@@ -40,11 +40,13 @@ function formatPrismaModelContent(modelContent: string[]): string[] {
         }
     })
 
+    const isValidName = (name: string) => !name.startsWith('@') && !name.startsWith('//')
+
     const nameLongest = modelLines
-        .filter(([name]) => !name.startsWith('@'))
+        .filter(([name]) => isValidName(name))
         .reduce((acc, [name]) => Math.max(acc, name.length), 0)
     const typeLongest = modelLines
-        .filter(([name]) => !name.startsWith('@'))
+        .filter(([name]) => isValidName(name))
         .reduce((acc, [, colType]) => Math.max(acc, colType.length), 0)
     const mapLongest = modelLines
         .filter(([_, __, mapPart]) => mapPart.startsWith('@map'))
