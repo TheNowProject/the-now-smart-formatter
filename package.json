@@ -2,11 +2,11 @@
   "name": "prisma-smart-formatter",
   "displayName": "The Now Smart Formatter",
   "description": "Collections of adjustments to formatters to make dev life easier (Prisma, Typescript)",
-  "publisher": "KhanhhNe",
+  "publisher": "TheNowProject",
   "version": "0.4.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/KhanhhNe/the-now-smart-formatter.git"
+    "url": "https://github.com/TheNowProject/the-now-smart-formatter.git"
   },
   "engines": {
     "vscode": "^1.77.0"

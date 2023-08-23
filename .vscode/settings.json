@@ -19,12 +19,10 @@
     },
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
-    "prisma-smart-formatter.typescript.defaultFormatter": "vscode.typescript-language-features",
     "[typescript]": {
         "editor.codeActionsOnSave": {
             "source.fixAll.eslint": true,
             "source.organizeImports": true
         },
-        "editor.defaultFormatter": "KhanhhNe.prisma-smart-formatter"
-    }
+    },
 }
